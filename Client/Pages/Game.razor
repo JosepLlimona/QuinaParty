@@ -1,0 +1,104 @@
+﻿@page "/game"
+@implements IAsyncDisposable
+
+<h3>Game</h3>
+
+<p>@RoomCode</p>
+
+<input type="text" @bind="roomCodeEnter" />
+<input type="text" @bind="userName" />
+
+<button @onclick="ConnectToRoom">Connect to room</button>
+<button @onclick="CreateRoom">Create room</button>
+
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Threading.Tasks
+@code {
+
+    private string roomCodeEnter = null!;
+    private string userName = null!;
+
+    private HubConnection? hubConnection;
+    private bool isConnected;
+
+    private string user = "BlazorUser";
+    private string message = "";
+    private List<string> messages = new();
+
+    private string RoomCode = "Room code: ";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Connect();
+    }
+
+    private async Task Connect()
+    {
+        try
+        {
+            if (hubConnection != null)
+                return;
+
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl("https://localhost:7159/Game")
+                .WithAutomaticReconnect()
+                .Build();
+
+            hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+            {
+                messages.Add($"{user}: {message}");
+                InvokeAsync(StateHasChanged);
+            });
+
+            hubConnection.On<string>("SystemMessage", msg =>
+            {
+                messages.Add($"[System] {msg}");
+                InvokeAsync(StateHasChanged);
+            });
+
+            await hubConnection.StartAsync();
+            isConnected = true;
+
+            messages.Add("[System] Connected to hub");
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    private async Task Send()
+    {
+        if (hubConnection is not null && isConnected)
+        {
+            await hubConnection.SendAsync("SendMessage", user, message);
+            message = "";
+        }
+    }
+
+    private async Task CreateRoom()
+    {
+        if (hubConnection is not null && isConnected)
+        {
+            var roomName = await hubConnection.InvokeAsync<string>("CreateRoom");
+
+            RoomCode = $"Room code: {roomName}";
+        }
+    }
+
+    private async Task ConnectToRoom()
+    {
+        if (hubConnection is not null && isConnected)
+        {
+            await hubConnection.InvokeAsync("ConnectToRoom", roomCodeEnter, userName);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
