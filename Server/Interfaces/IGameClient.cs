@@ -6,4 +6,6 @@ public interface IGameClient
 {
     Task SendAsync(string user, string message);
     Task StartGame(string roomName);
+
+    Task UserJoined(string userName);
 }

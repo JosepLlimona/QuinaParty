@@ -1,0 +1,8 @@
+﻿@page "/game/{Id}"
+<h3>Sala: @Id</h3>
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = null!;
+
+}
