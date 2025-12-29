@@ -1,0 +1,49 @@
+﻿@page "/game/admin/{Id}"
+@using Client.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Threading.Tasks
+@inject SignalRService SignalRService
+@inject NavigationManager Navigator
+
+<h3>Sala: @Id</h3>
+<button @onclick="CheckConnection">Check conection</button>
+<h1>@Connected</h1>
+<div>
+    <h3>Usuaris: </h3>
+    <ul>
+        @foreach (var user in Users)
+        {
+            <li>@user</li>
+        }
+    </ul>
+</div>
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = null!;
+
+    private bool Connected { get; set; }
+
+    private List<string> Users = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!SignalRService.IsConnected)
+            Navigator.NavigateTo("/game");
+
+        SignalRService.Connection.On<string>("UserJoined", user => UserJoined(user));
+    }
+
+    private async Task CheckConnection()
+    {
+        if (SignalRService.IsConnected)
+        {
+            Connected = await SignalRService.Connection.InvokeAsync<bool>("CheckIfAdminConnected", Id);
+        }
+    }
+
+    private void UserJoined(string user)
+    {
+        Users.Add(user);
+    }
+}

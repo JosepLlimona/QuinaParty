@@ -51,11 +51,20 @@ public class GameHub : Hub<IGameClient>
             Name = userName
         };
 
-        rooms.First(r => r.RoomCode == roomName).users.Add(user);
+        var room = rooms.First(r => r.RoomCode == roomName);
+
+        room.users.Add(user);
 
         await Groups.AddToGroupAsync(Context.ConnectionId, roomName);
 
         Console.WriteLine($"Connectat {user.Name}: {user.connectionId}");
+
+        await Clients.Client(room.adminConnectionId).UserJoined(user.Name);
+    }
+
+    public async Task<bool> CheckIfAdminConnected(string rommName)
+    {
+        return rooms.FirstOrDefault(r => r.RoomCode == rommName)?.adminConnectionId == Context.ConnectionId;
     }
 
     public override async Task OnConnectedAsync()
